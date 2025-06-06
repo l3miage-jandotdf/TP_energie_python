@@ -89,27 +89,19 @@ class Machine(object):
         as soon as possible after time start_time.
         Returns the actual start time.
         '''
-        # Vérifier si on peut ajouter l'opération à ce moment
         actual_start_time = max(start_time, self._available_time)
         
-        # Si la machine n'est pas en marche, il faut la démarrer
         if not self._is_running:
-            # Démarrer la machine
             self._start_times.append(actual_start_time)
             self._is_running = True
-            # Mise à jour du temps disponible après démarrage
             actual_start_time += self._set_up_time
             self._available_time = actual_start_time
         
-        # Vérifier si l'opération peut être planifiée avant la fin du temps imparti
         if actual_start_time + operation.processing_time + self._tear_down_time > self._end_time:
-            # L'opération ne peut pas être planifiée car elle dépasserait le temps imparti
             return -1
         
-        # Ajout de l'opération au planning
         self._scheduled_operations.append((operation, actual_start_time))
         
-        # Mise à jour du temps disponible
         self._available_time = actual_start_time + operation.processing_time
         
         return actual_start_time
