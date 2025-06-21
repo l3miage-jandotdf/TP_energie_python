@@ -5,7 +5,7 @@ When operation is scheduled, its schedule information is updated.
 
 @author: Vassilissa Lehoux
 '''
-from typing import List, Dict, Tuple
+from typing import List
 
 
 class OperationScheduleInfo(object):
@@ -14,29 +14,47 @@ class OperationScheduleInfo(object):
     '''
 
     def __init__(self, machine_id: int, schedule_time: int, duration: int, energy_consumption: int):
-        self.machine_id = machine_id
-        self.schedule_time = schedule_time
-        self.duration = duration
-        self.energy_consumption = energy_consumption
+        self._machine_id = machine_id
+        self._schedule_time = schedule_time
+        self._duration = duration
+        self._energy_consumption = energy_consumption
+    @property
+    def machine_id(self) -> int:
+        return self._machine_id
 
+    @property
+    def schedule_time(self) -> int:
+        return self._schedule_time
+
+    @property
+    def duration(self) -> int:
+        return self._duration
+
+    @property
+    def energy_consumption(self) -> int:
+        return self._energy_consumption
+
+    @property
+    def end_time(self) -> int:
+        return self._schedule_time + self._duration
 
 class Operation(object):
     '''
     Operation of the jobs
     '''
 
-    def __init__(self, operation_id, job):
+    def __init__(self, job_id, operation_id):
         '''
         Constructor
         '''
+        self._job_id = job_id
         self._operation_id = operation_id
-        self._job = job
-        self._job_id = job.job_id
+        self._schedule_info = None
         self._predecessors = []
         self._successors = []
-        self._schedule_info = None
-        # Machine options: dict avec machine_id comme clé et (duration, energy) comme valeur
-        self._machine_options = {}
+        self._job = None
+        self._sequence_num = -1
+        self._variants = []
 
     def __str__(self):
         '''
@@ -46,7 +64,7 @@ class Operation(object):
         if self._schedule_info:
             return base_str + f"_M{self.assigned_to}_ci{self.processing_time}_e{self.energy}"
         else:
-            return base_str
+            return base_str + "_UNSCHEDULED"
 
     def __repr__(self):
         return str(self)
@@ -71,19 +89,11 @@ class Operation(object):
         '''
         if operation not in self._successors:
             self._successors.append(operation)
-            operation.add_predecessor(self)
-
-    def set_predecessor(self, operation):
-        '''
-        Sets an operation as predecessor (for Job class)
-        '''
-        self.add_predecessor(operation)
-
-    def add_machine_option(self, machine, duration, energy_consumption):
-        '''
-        Adds a machine option with its associated duration and energy consumption
-        '''
-        self._machine_options[machine.machine_id] = (duration, energy_consumption, machine)
+    
+    def add_variant(self, machine_id, processing_time, energy):
+        if not hasattr(self, "_variants"):
+            self._variants = []
+        self._variants.append((machine_id, processing_time, energy))
 
     @property
     def operation_id(self) -> int:
@@ -91,7 +101,7 @@ class Operation(object):
 
     @property
     def job_id(self) -> int:
-        return self._job_id
+        return self._job.job_id if self._job else -1
 
     @property
     def predecessors(self) -> List:
@@ -115,21 +125,13 @@ class Operation(object):
         '''
         return self._schedule_info is not None
 
-    def is_scheduled(self) -> bool:
-        '''
-        Alias for assigned (pour compatibilité avec Job.completion_time)
-        '''
-        return self.assigned
-
     @property
     def assigned_to(self) -> int:
         '''
         Returns the machine ID it is assigned to if any
         and -1 otherwise
         '''
-        if self._schedule_info:
-            return self._schedule_info.machine_id
-        return -1
+        return self._schedule_info.machine_id if self.assigned else -1
 
     @property
     def processing_time(self) -> int:
@@ -137,8 +139,8 @@ class Operation(object):
         Returns the processing time if is assigned,
         -1 otherwise
         '''
-        if self._schedule_info:
-            return self._schedule_info.duration
+        if self.assigned:
+            return getattr(self, "_processing_time", self._schedule_info.duration)
         return -1
 
     @property
@@ -147,9 +149,7 @@ class Operation(object):
         Returns the start time if is assigned,
         -1 otherwise
         '''
-        if self._schedule_info:
-            return self._schedule_info.schedule_time
-        return -1
+        return self._schedule_info.schedule_time if self.assigned else -1
 
     @property
     def end_time(self) -> int:
@@ -157,9 +157,7 @@ class Operation(object):
         Returns the end time if is assigned,
         -1 otherwise
         '''
-        if self._schedule_info:
-            return self._schedule_info.schedule_time + self._schedule_info.duration
-        return -1
+        return self._schedule_info.end_time if self.assigned else -1
 
     @property
     def energy(self) -> int:
@@ -167,9 +165,7 @@ class Operation(object):
         Returns the energy consumption if is assigned,
         -1 otherwise
         '''
-        if self._schedule_info:
-            return self._schedule_info.energy_consumption
-        return -1
+        return self._schedule_info.energy_consumption if self.assigned else -1
 
     def is_ready(self, at_time) -> bool:
         '''
@@ -188,20 +184,34 @@ class Operation(object):
         @param check_success: if True, check if all the preceeding operations have
           been scheduled and if the schedule time is compatible
         '''
-        # Vérifier si la machine est disponible pour cette opération
-        if machine_id not in self._machine_options:
-            return False
-        
-        # Vérifier que les prédécesseurs sont bien terminés
         if check_success and not self.is_ready(at_time):
             return False
-        
-        # Récupérer les informations de durée et d'énergie pour cette machine
-        duration, energy, _ = self._machine_options[machine_id]
-        
-        # Créer les informations d'ordonnancement
-        self._schedule_info = OperationScheduleInfo(machine_id, at_time, duration, energy)
-        
+
+        p_time: int
+        energy: int
+
+        if getattr(self, "_variants", []):
+            variant = [v for v in self._variants if v[0] == machine_id]
+            if not variant:
+                return False
+            p_time, energy = variant[0][1], variant[0][2]
+
+        else:
+            if (not hasattr(self, "_machine_id")) or machine_id != self._machine_id:
+                return False
+            p_time  = getattr(self, "_processing_time", -1)
+            energy  = getattr(self, "_energy_consumption", -1)
+            if p_time < 0 or energy < 0:
+                return False
+
+        self._schedule_info = OperationScheduleInfo(
+            machine_id=machine_id,
+            schedule_time=at_time,
+            duration=p_time,
+            energy_consumption=energy
+        )
+        self._processing_time = p_time
+        self._energy_consumption = energy
         return True
 
     @property
@@ -209,37 +219,15 @@ class Operation(object):
         '''
         Minimum start time given the precedence constraints
         '''
-        max_end_time = 0
-        for pred in self._predecessors:
-            if pred.assigned:
-                max_end_time = max(max_end_time, pred.end_time)
-            else:
-                # Si un prédécesseur n'est pas assigné, on ne peut pas déterminer
-                # le temps minimum de départ
-                return -1
-        return max_end_time
+        if not self._predecessors:
+            return 0
+        return max(pred.end_time for pred in self._predecessors)
 
-    def schedule_at_min_time(self, machine_id: int, min_time: int = 0) -> bool:
+    def schedule_at_min_time(self, machine_id: int, min_time: int) -> bool:
         '''
-        Try and schedule the operation at or after min_time.
+        Try and schedule the operation af or after min_time.
         Return False if not possible
         '''
-        if machine_id not in self._machine_options:
-            return False
-        
-        # Déterminer le temps de départ le plus tôt en tenant compte des contraintes
-        # de précédence et du temps minimum demandé
-        earliest_start = max(min_time, self.min_start_time)
-        
-        if earliest_start < 0:
-            return False  # Un prédécesseur n'est pas assigné
-        
-        # Planifier l'opération
-        return self.schedule(machine_id, earliest_start)
+        actual_start = max(min_time, self.min_start_time)
+        return self.schedule(machine_id, actual_start, check_success=True)
 
-    def get_machine_options(self) -> Dict[int, Tuple[int, int]]:
-        '''
-        Returns a dictionary of machine options with machine_id as key
-        and (duration, energy) as value
-        '''
-        return {mid: (d, e) for mid, (d, e, _) in self._machine_options.items()}

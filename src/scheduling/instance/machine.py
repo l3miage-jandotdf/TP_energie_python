@@ -13,8 +13,8 @@ class Machine(object):
     When operations are scheduled on the machine, contains the relative information. 
     '''
 
-    def __init__(self, machine_id: int, end_time: int, set_up_time: int, set_up_energy: int, 
-                 tear_down_time: int, tear_down_energy: int, min_consumption: int):
+    def __init__(self, machine_id: int, set_up_time: int, set_up_energy: int, tear_down_time: int,
+                 tear_down_energy:int, min_consumption: int, end_time: int):
         '''
         Constructor
         Machine is stopped at the beginning of the planning and need to
@@ -30,42 +30,32 @@ class Machine(object):
         self._min_consumption = min_consumption
         self._end_time = end_time
         
-        # Informations pour le planning
-        self._scheduled_operations = []  # Liste des opérations planifiées
-        self._start_times = []  # Liste des temps de démarrage de la machine
-        self._stop_times = []   # Liste des temps d'arrêt de la machine
-        self._is_running = False  # La machine est-elle en fonctionnement?
-        self._available_time = 0  # Temps à partir duquel la machine est disponible
-
-    def reset(self):
-        '''
-        Reset machine scheduling information
-        '''
+        # State variables
         self._scheduled_operations = []
         self._start_times = []
         self._stop_times = []
-        self._is_running = False
-        self._available_time = 0
+        self._current_state = 'OFF'
+        self._current_energy = 0
+        self._last_available_time = 0
+
+    def reset(self):
+        self._scheduled_operations = []
+        self._start_times = []
+        self._stop_times = []
+        self._current_state = 'OFF'
+        self._current_energy = 0
+        self._last_available_time = 0
 
     @property
     def set_up_time(self) -> int:
-        '''
-        Returns the set up time of the machine
-        '''
         return self._set_up_time
 
     @property
     def tear_down_time(self) -> int:
-        '''
-        Returns the tear down time of the machine
-        '''
         return self._tear_down_time
 
     @property
     def machine_id(self) -> int:
-        '''
-        Returns the ID of the machine
-        '''
         return self._machine_id
 
     @property
@@ -81,7 +71,13 @@ class Machine(object):
         Returns the next time at which the machine is available
         after processing its last operation of after its last set up.
         """
-        return self._available_time
+        if not self._scheduled_operations:
+            if self._current_state == 'OFF':
+                return self._last_available_time + self._set_up_time
+            return self._last_available_time
+        else:
+            last_op = self._scheduled_operations[-1]
+            return last_op.start_time + last_op.processing_time
 
     def add_operation(self, operation: Operation, start_time: int) -> int:
         '''
@@ -89,49 +85,60 @@ class Machine(object):
         as soon as possible after time start_time.
         Returns the actual start time.
         '''
-        actual_start_time = max(start_time, self._available_time)
-        
-        if not self._is_running:
-            self._start_times.append(actual_start_time)
-            self._is_running = True
-            actual_start_time += self._set_up_time
-            self._available_time = actual_start_time
-        
-        if actual_start_time + operation.processing_time + self._tear_down_time > self._end_time:
-            return -1
-        
-        self._scheduled_operations.append((operation, actual_start_time))
-        
-        self._available_time = actual_start_time + operation.processing_time
-        
-        return actual_start_time
+        actual_start = max(start_time, self.available_time)
+        if self._current_state == "OFF":
+            actual_start = max(actual_start, self._last_available_time + self._set_up_time)
+
+            self._start_times.append(actual_start - self._set_up_time)
+
+            if not self._stop_times:
+                self._stop_times.append(self._end_time)
+
+            self._current_energy += self._set_up_energy
+            self._current_state = "ON"
+
+        ok = operation.schedule(
+            machine_id=self._machine_id,
+            at_time=actual_start,
+            check_success=False
+        )
+        if not ok:
+            raise ValueError("Operation could not be scheduled on this machine")
+
+        self._scheduled_operations.append(operation)
+        self._current_energy += operation.energy * operation.processing_time
+        self._last_available_time = actual_start + operation.processing_time
+
+        return actual_start
   
     def stop(self, at_time):
         """
         Stops the machine at time at_time.
         """
         assert(self.available_time <= at_time)
+        assert at_time + self._tear_down_time <= self._end_time
         
-        if self._is_running:
-            self._stop_times.append(at_time)
-            self._is_running = False
-            self._available_time = at_time + self._tear_down_time
+        self._stop_times.append(at_time)
+        self._current_energy += self._tear_down_energy
+        self._current_state = 'OFF'
+        self._last_available_time = at_time + self._tear_down_time
 
     @property
     def working_time(self) -> int:
         '''
         Total time during which the machine is running
         '''
-        if not self._start_times:
-            return 0
-        
-        total_time = 0
-        for i in range(len(self._start_times)):
-            start = self._start_times[i]
-            stop = self._stop_times[i] if i < len(self._stop_times) else self._available_time
-            total_time += (stop - start)
-        
-        return total_time
+        if self._start_times and not self._stop_times:
+            if self.available_time >= self._end_time:
+                return self._end_time
+            else:
+                return self._end_time - self._start_times[0]
+
+        total = 0
+        for i, start in enumerate(self._start_times):
+            stop = self._stop_times[i]
+            total += stop - start
+        return total
 
     @property
     def start_times(self) -> List[int]:
@@ -152,55 +159,20 @@ class Machine(object):
     @property
     def total_energy_consumption(self) -> int:
         """
-        Total energy consumption of the machine during planning execution.
+        Total energy consumption of the machine during planning exectution.
         """
-        if not self._start_times:
-            return 0
+        total_time = self._end_time
+        busy_time = sum(op.processing_time for op in self._scheduled_operations)
+        idle_time = max(0, total_time - busy_time - sum(self._start_times) - sum(self._stop_times))
         
-        total_energy = 0
-        
-        # Énergie de démarrage
-        for _ in self._start_times:
-            total_energy += self._set_up_energy
-        
-        # Énergie d'arrêt
-        for _ in self._stop_times:
-            total_energy += self._tear_down_energy
-        
-        # Énergie des opérations
-        for operation, _ in self._scheduled_operations:
-            total_energy += operation.energy
-        
-        # Énergie de veille (idle energy)
-        # Calculer le temps total pendant lequel la machine est allumée mais n'exécute pas d'opérations
-        idle_time = 0
-        
-        for i in range(len(self._start_times)):
-            start = self._start_times[i] + self._set_up_time  # Après le démarrage
-            stop = self._stop_times[i] if i < len(self._stop_times) else self._available_time
-            
-            # Calculer le temps total pendant lequel la machine est allumée
-            total_on_time = stop - start
-            
-            # Calculer le temps pendant lequel la machine exécute des opérations dans cette période
-            operation_time = 0
-            for op, op_start in self._scheduled_operations:
-                op_end = op_start + op.processing_time
-                
-                # Si l'opération est exécutée pendant cette période de fonctionnement
-                if op_start >= start and op_end <= stop:
-                    operation_time += op.processing_time
-            
-            # Le temps d'inactivité est la différence
-            idle_time += (total_on_time - operation_time)
-        
-        # Ajouter l'énergie de veille
-        total_energy += idle_time * self._min_consumption
-        
-        return total_energy
+        return (self._current_energy + 
+                idle_time * self._min_consumption +
+                len(self._start_times) * self._set_up_energy +
+                len(self._stop_times) * self._tear_down_energy)
 
     def __str__(self):
         return f"M{self.machine_id}"
 
     def __repr__(self):
         return str(self)
+

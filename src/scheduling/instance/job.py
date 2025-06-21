@@ -20,7 +20,8 @@ class Job(object):
         '''
         self._job_id = job_id
         self._operations = []
-        self._next_operation_index = 0  # Indice de la prochaine opération à planifier
+        self._next_operation_index = 0
+        self._completion_time = 0
         
     @property
     def job_id(self) -> int:
@@ -34,8 +35,8 @@ class Job(object):
         Resets the planned operations
         '''
         self._next_operation_index = 0
-        for operation in self._operations:
-            operation.reset()
+        for op in self._operations:
+            op.reset()
 
     @property
     def operations(self) -> List[Operation]:
@@ -57,7 +58,7 @@ class Job(object):
         '''
         Updates the next_operation to schedule
         '''
-        if self._next_operation_index < len(self._operations):
+        if not self.planned:
             self._next_operation_index += 1
 
     @property
@@ -79,13 +80,13 @@ class Job(object):
         Adds an operation to the job at the end of the operation list,
         adds the precedence constraints between job operations.
         '''
-        # Ajouter des contraintes de précédence si nécessaire
         if self._operations:
-            previous_operation = self._operations[-1]
-            # Utiliser add_predecessor pour établir la relation de précédence
-            operation.add_predecessor(previous_operation)
-        
+            operation.add_predecessor(self._operations[-1])
+
         self._operations.append(operation)
+        operation.job = self
+        operation.sequence_num = len(self._operations) - 1
+
 
     @property
     def completion_time(self) -> int:
@@ -94,12 +95,15 @@ class Job(object):
         '''
         if not self._operations:
             return 0
-        
-        # Le temps de complétion est le temps de fin de la dernière opération
-        max_completion_time = 0
-        for operation in self._operations:
-            if operation.assigned:  # Utiliser assigned au lieu de is_scheduled()
-                end_time = operation.end_time  # Utiliser end_time au lieu de start_time + duration
-                max_completion_time = max(max_completion_time, end_time)
-        
-        return max_completion_time
+            
+        last_op = self._operations[-1]
+        return last_op.start_time + last_op.processing_time if last_op.start_time is not None else 0
+
+    def set_operations(self, operations: List[Operation]):
+        '''
+        Sets all operations for the job at once
+        '''
+        self._operations = []
+        for op in operations:
+            self.add_operation(op)
+
