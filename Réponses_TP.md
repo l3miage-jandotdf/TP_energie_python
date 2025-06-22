@@ -1,5 +1,13 @@
+<h1 style="text-align: center;">
 TP Ordonnancement de Tâches : Modélisation
-1) Variables de décision, contraintes et objectifs
+</h1>
+
+<h3>
+Modélisation
+</h3>
+<h5>
+1)Variables de décision, contraintes et objectifs
+</h5>
 Variables de Décision :
 Affectation des opérations aux machines : Pour chaque opération, nous devons choisir la machine sur laquelle elle sera exécutée, parmi l'ensemble des machines compatibles (appelées "variants" dans le code).
 Temps de début des opérations : Pour chaque opération affectée, nous devons déterminer son instant de début précis sur la machine choisie.
@@ -14,6 +22,9 @@ Objectifs :
 Minimiser la Consommation Totale d'Énergie : L'entreprise souhaite réduire au maximum la somme de l'énergie consommée par toutes les machines. Cela inclut l'énergie de démarrage, d'arrêt, l'énergie consommée en inactivité (min_consumption) et celle consommée lors de l'exécution des opérations.
 Minimiser le Makespan (Cmax) : Cet objectif vise à réduire le temps total nécessaire pour compléter toutes les tâches, c'est-à-dire l'instant de fin de la dernière opération de toutes les tâches.
 Minimiser le Temps Moyen de Complétion des Tâches (Sum Ci) : L'entreprise cherche également à réduire la moyenne des temps de complétion de chaque tâche, ce qui correspond à la somme des temps de complétion de chaque job divisée par le nombre de jobs.
+
+
+
 2) Fonction objectif agrégée
 La fonction objectif proposée pour agréger les différents objectifs de l'entreprise est une combinaison linéaire pondérée. Cette approche permet de refléter l'importance relative de chaque objectif :
 
@@ -30,6 +41,8 @@ alpha,
 beta,
 gamma sont des poids positifs (définis comme ALPHA, BETA, GAMMA dans le code solution.py) qui déterminent l'influence de chaque critère sur la valeur finale de l'objectif.
 Dans le code fourni, les poids sont configurés ainsi : ALPHA = 1.0, BETA = 1.0, et GAMMA = 0.0. Cela signifie que la fonction objectif cherche actuellement à minimiser la somme de l'énergie totale et du makespan, tandis que le temps moyen de complétion n'est pas directement pris en compte.
+
+
 
 3) Évaluation d'une solution réalisable et non réalisable
 Évaluation d'une solution réalisable :
@@ -54,6 +67,8 @@ Où :
 NombreViolations représente le nombre d'opérations qui n'ont pas pu être affectées.
 PENALTY est une constante de grande valeur (10 ** 6 dans le code).
 Cette approche garantit que les algorithmes d'optimisation chercheront toujours à trouver une solution réalisable avant d'optimiser les métriques de performance.
+
+
 
 4) Instance non réalisable
 Voici une instance d'exemple où aucune solution réalisable n'existe :
@@ -125,6 +140,9 @@ Cet algorithme est glouton car à chaque étape, il prend la décision qui sembl
 Il choisit toujours l'opération et l'affectation qui permettent de terminer une opération le plus tôt possible. C'est une stratégie de minimisation locale du temps.
 Il ne réévalue pas les décisions passées et ne tente pas de les annuler ou de les modifier pour obtenir un meilleur résultat global.
 L'objectif ici est de produire un planning rapidement, quitte à ce qu'il ne soit pas optimal globalement.
+
+
+Première heuristique
 
 2) Algorithme non-déterministe
 Proposition d'algorithme non-déterministe : "Random Prioritized Scheduling (RPS)"
@@ -201,7 +219,7 @@ Complexité : O(N² timesP)
 
 Si P est constant (précédences intra-job simples), la complexité est O(N²).
 
-
+Recherche locale
 
 
 1) Proposition de deux voisinages de solutions
