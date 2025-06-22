@@ -1,0 +1,25 @@
+Instance,Algorithm,Best Objective,Average Time (s)
+jsp2,Greedy,30000000,0.0018088817596435547
+jsp2,NonDeterminist (best of 10),30000000,0.0009540081024169922
+jsp2,FirstNeighborLS (best of 10 initializations),30000000,0.061524033546447754
+jsp2,BestNeighborLS (best of 10 initializations),30000000,1.5140017509460448
+jsp5,Greedy,30000000,0.0009753704071044922
+jsp5,NonDeterminist (best of 10),30000000,0.0006997585296630859
+jsp5,FirstNeighborLS (best of 10 initializations),30000000,0.062207269668579104
+jsp5,BestNeighborLS (best of 10 initializations),30000000,1.461546206474304
+jsp10,Greedy,30000000,0.0009968280792236328
+jsp10,NonDeterminist (best of 10),30000000,0.0005999088287353515
+jsp10,FirstNeighborLS (best of 10 initializations),30000000,0.05884287357330322
+jsp10,BestNeighborLS (best of 10 initializations),30000000,1.551170325279236
+jsp20,Greedy,36000000,0.0006270408630371094
+jsp20,NonDeterminist (best of 10),36000000,0.0009037017822265625
+jsp20,FirstNeighborLS (best of 10 initializations),36000000,0.1432706117630005
+jsp20,BestNeighborLS (best of 10 initializations),36000000,3.204076147079468
+jsp50,Greedy,36000000,0.0009722709655761719
+jsp50,NonDeterminist (best of 10),36000000,0.0008637905120849609
+jsp50,FirstNeighborLS (best of 10 initializations),36000000,0.051816129684448244
+jsp50,BestNeighborLS (best of 10 initializations),36000000,1.838447380065918
+jsp100,Greedy,40000000,0.00025153160095214844
+jsp100,NonDeterminist (best of 10),40000000,0.0008410453796386719
+jsp100,FirstNeighborLS (best of 10 initializations),40000000,0.08226346969604492
+jsp100,BestNeighborLS (best of 10 initializations),40000000,1.9853652477264405
