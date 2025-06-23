@@ -75,21 +75,18 @@ class FirstComeFirstServedHeuristic(Heuristic):
         merged_params = self._merge_params(params)
         solution = Solution(instance)
         
-        # Continue until all operations are scheduled
+        # Jusqu'à ce que toutes les opérations soient faites
         while solution.available_operations:
             available_ops = solution.available_operations
             
-            # Take the first available operation
             operation = available_ops[0]
             
-            # Select machine based on strategy
             machine = self._select_machine(operation, instance, merged_params['machine_selection'])
             
-            # Schedule the operation
             success = solution.schedule(operation, machine)
             
             if not success:
-                # If scheduling failed, try next available machine
+                # On essaie la prochaine machine
                 for machine in instance.machines:
                     if solution.schedule(operation, machine):
                         break
@@ -100,7 +97,7 @@ class FirstComeFirstServedHeuristic(Heuristic):
         '''
         Select a machine for the operation based on the given strategy
         '''
-        # Get machines that can process this operation
+        # Toutes les machines capables de faire l'opération
         available_machines = self._get_available_machines(operation, instance)
         
         if not available_machines:
@@ -169,21 +166,18 @@ class ShortestProcessingTimeHeuristic(Heuristic):
         while solution.available_operations:
             available_ops = solution.available_operations
             
-            # Sort operations by shortest processing time
+            # On trie par les opérations qui prennent le moins de temps
             sorted_ops = sorted(available_ops, 
                               key=lambda op: self._get_min_processing_time(op, instance))
             
-            # Take the operation with shortest processing time
+            # La plus courte
             operation = sorted_ops[0]
             
-            # Select best machine for this operation
             machine = self._select_machine(operation, instance, merged_params['machine_selection'])
             
-            # Schedule the operation
             success = solution.schedule(operation, machine)
             
             if not success:
-                # Try other machines if scheduling failed
                 available_machines = self._get_available_machines(operation, instance)
                 for machine in available_machines:
                     if solution.schedule(operation, machine):
@@ -238,7 +232,7 @@ class ShortestProcessingTimeHeuristic(Heuristic):
         '''
         machine_options = operation.get_machine_options()
         if machine.machine_id in machine_options:
-            return machine_options[machine.machine_id][0]  # duration
+            return machine_options[machine.machine_id][0]  # durée
         return float('inf')
 
     def _get_energy_consumption(self, operation: Operation, machine: Machine) -> int:
@@ -247,7 +241,7 @@ class ShortestProcessingTimeHeuristic(Heuristic):
         '''
         machine_options = operation.get_machine_options()
         if machine.machine_id in machine_options:
-            return machine_options[machine.machine_id][1]  # energy
+            return machine_options[machine.machine_id][1]  # énergie
         return float('inf')
 
 
@@ -272,22 +266,18 @@ class LongestProcessingTimeHeuristic(Heuristic):
         while solution.available_operations:
             available_ops = solution.available_operations
             
-            # Sort operations by longest processing time
+            # Même principe que pour l'autre fonction run, mais avec le temps le plus long
             sorted_ops = sorted(available_ops, 
                               key=lambda op: self._get_max_processing_time(op, instance),
                               reverse=True)
             
-            # Take the operation with longest processing time
             operation = sorted_ops[0]
             
-            # Select best machine for this operation
             machine = self._select_machine(operation, instance, merged_params['machine_selection'])
             
-            # Schedule the operation
             success = solution.schedule(operation, machine)
             
             if not success:
-                # Try other machines if scheduling failed
                 available_machines = self._get_available_machines(operation, instance)
                 for machine in available_machines:
                     if solution.schedule(operation, machine):
@@ -373,28 +363,23 @@ class RandomHeuristic(Heuristic):
         merged_params = self._merge_params(params)
         solution = Solution(instance)
         
-        # Set random seed if provided
+        # Aléatoire
         if merged_params['seed'] is not None:
             random.seed(merged_params['seed'])
         
         while solution.available_operations:
             available_ops = solution.available_operations
             
-            # Randomly select an operation
             operation = random.choice(available_ops)
             
-            # Get available machines for this operation
             available_machines = self._get_available_machines(operation, instance)
             
             if available_machines:
-                # Randomly select a machine
                 machine = random.choice(available_machines)
                 
-                # Schedule the operation
                 success = solution.schedule(operation, machine)
                 
                 if not success:
-                    # Try other machines randomly if scheduling failed
                     machines = available_machines.copy()
                     random.shuffle(machines)
                     for machine in machines:
@@ -441,7 +426,7 @@ class EnergyAwareHeuristic(Heuristic):
         while solution.available_operations:
             available_ops = solution.available_operations
             
-            # Evaluate each operation-machine combination
+            # Evalue les combinaisons entre machines et opérations
             best_operation = None
             best_machine = None
             best_score = float('inf')
@@ -450,7 +435,7 @@ class EnergyAwareHeuristic(Heuristic):
                 available_machines = self._get_available_machines(operation, instance)
                 
                 for machine in available_machines:
-                    # Calculate combined score (energy + time)
+                    # Calcule les scores (énergie + temps)
                     energy_cost = self._get_energy_consumption(operation, machine)
                     time_cost = self._get_processing_time(operation, machine)
                     
@@ -461,12 +446,11 @@ class EnergyAwareHeuristic(Heuristic):
                         best_operation = operation
                         best_machine = machine
             
-            # Schedule the best operation-machine combination
+            # Meilleure solution
             if best_operation and best_machine:
                 success = solution.schedule(best_operation, best_machine)
                 
                 if not success:
-                    # Fallback to first available machine
                     available_machines = self._get_available_machines(best_operation, instance)
                     for machine in available_machines:
                         if solution.schedule(best_operation, machine):
@@ -527,21 +511,16 @@ class EarliestDueDateHeuristic(Heuristic):
         while solution.available_operations:
             available_ops = solution.available_operations
             
-            # Sort operations by job priority (for now, by job_id as proxy)
-            # In a real implementation, you'd sort by job due date
+            # Trie par les priorités de job
             sorted_ops = sorted(available_ops, key=lambda op: op.job_id)
             
-            # Take the operation from the job with highest priority
             operation = sorted_ops[0]
             
-            # Select best machine for this operation
             machine = self._select_machine(operation, instance, merged_params['machine_selection'])
             
-            # Schedule the operation
             success = solution.schedule(operation, machine)
             
             if not success:
-                # Try other machines if scheduling failed
                 available_machines = self._get_available_machines(operation, instance)
                 for machine in available_machines:
                     if solution.schedule(operation, machine):

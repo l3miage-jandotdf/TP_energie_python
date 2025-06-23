@@ -35,7 +35,7 @@ class Instance(object):
         operation_global_id = 0
         operation_map = {}
 
-        # Lecture des opérations
+        # On lit les opérations du fichier csv
         with open(os.path.join(folderpath, inst._instance_name + '_op.csv'), 'r') as csv_file:
             csv_reader = csv.reader(csv_file)
             header = next(csv_reader)
@@ -65,10 +65,11 @@ class Instance(object):
             jobs[job_id].add_operation(operation_map[(job_id, op_id)])
         inst._jobs = list(jobs.values())
 
-        # Lecture des machines
+        # On lit les données des machines du fichier csv
         with open(os.path.join(folderpath, inst._instance_name + '_mach.csv'), 'r') as csv_file:
             csv_reader = csv.reader(csv_file)
             header = next(csv_reader)
+            # On prend chaque nom de colonne
             for row in csv_reader:
                 machine_id = int(row[0])
                 set_up_time = int(row[1])
@@ -78,6 +79,7 @@ class Instance(object):
                 min_consumption = int(row[5])
                 end_time = int(row[6])
 
+                # On construit l'objet et on renvoie l'instance de la machine
                 machine = Machine(machine_id, set_up_time, set_up_energy,
                                 tear_down_time, tear_down_energy,
                                 min_consumption, end_time)

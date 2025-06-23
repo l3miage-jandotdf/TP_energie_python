@@ -64,7 +64,7 @@ class Operation(object):
         if self._schedule_info:
             return base_str + f"_M{self.assigned_to}_ci{self.processing_time}_e{self.energy}"
         else:
-            return base_str + "_UNSCHEDULED"
+            return base_str
 
     def __repr__(self):
         return str(self)
@@ -184,6 +184,7 @@ class Operation(object):
         @param check_success: if True, check if all the preceeding operations have
           been scheduled and if the schedule time is compatible
         '''
+        # ne peut pas programmer l'opération
         if check_success and not self.is_ready(at_time):
             return False
 

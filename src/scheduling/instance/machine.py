@@ -30,7 +30,7 @@ class Machine(object):
         self._min_consumption = min_consumption
         self._end_time = end_time
         
-        # State variables
+        # Les variables d'état !
         self._scheduled_operations = []
         self._start_times = []
         self._stop_times = []
@@ -39,6 +39,7 @@ class Machine(object):
         self._last_available_time = 0
 
     def reset(self):
+        #on remet les valeurs par défaut
         self._scheduled_operations = []
         self._start_times = []
         self._stop_times = []
@@ -72,10 +73,12 @@ class Machine(object):
         after processing its last operation of after its last set up.
         """
         if not self._scheduled_operations:
+            #on arrête la machine
             if self._current_state == 'OFF':
                 return self._last_available_time + self._set_up_time
             return self._last_available_time
         else:
+            #sinon, on lance la prochaine operation
             last_op = self._scheduled_operations[-1]
             return last_op.start_time + last_op.processing_time
 
@@ -103,7 +106,7 @@ class Machine(object):
             check_success=False
         )
         if not ok:
-            raise ValueError("Operation could not be scheduled on this machine")
+            raise ValueError("Impossible de lancer l'opération !")
 
         self._scheduled_operations.append(operation)
         self._current_energy += operation.energy * operation.processing_time
@@ -135,6 +138,7 @@ class Machine(object):
                 return self._end_time - self._start_times[0]
 
         total = 0
+        #On cumule le temps
         for i, start in enumerate(self._start_times):
             stop = self._stop_times[i]
             total += stop - start

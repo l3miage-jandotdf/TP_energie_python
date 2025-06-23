@@ -11,13 +11,12 @@ from src.scheduling.optim.neighborhoods import ReassignOneOperation, SwapOperati
 
 
 # --- Configuration ---
-DATA_FOLDER = "./data" # Assuming 'data' folder is in the same directory as this script
-INSTANCES_TO_TEST = ["jsp2", "jsp5", "jsp10", "jsp20", "jsp50", "jsp100"] # Select representative instances
-NUM_RUNS_NON_DETERMINISTIC = 10 # Number of runs for NonDeterminist and initial solutions for Local Search
-MAX_LS_ITERATIONS = 100 # Max iterations for local search
-NO_IMPROVEMENT_LIMIT = 20 # Stop criterion for BestNeighborLocalSearch
+DATA_FOLDER = "./data"
+INSTANCES_TO_TEST = ["jsp2", "jsp5", "jsp10", "jsp20", "jsp50", "jsp100"] 
+NUM_RUNS_NON_DETERMINISTIC = 10 
+MAX_LS_ITERATIONS = 100 
+NO_IMPROVEMENT_LIMIT = 20 
 
-# --- Helper Function for Algorithm Execution ---
 def run_algorithm(algo_class: Type, instance: Instance, num_runs: int = 1, **kwargs) -> Tuple[float, float]:
     """
     Runs an algorithm multiple times and returns the best objective and average time.
@@ -25,13 +24,12 @@ def run_algorithm(algo_class: Type, instance: Instance, num_runs: int = 1, **kwa
     best_objective = float('inf')
     total_time = 0.0
 
-    print(f"  Running {algo_class.__name__} for {num_runs} times...")
+    print(f"  L'algorithme {algo_class.__name__} a tourné {num_runs} fois...")
 
     for i in range(num_runs):
         start_time = time.time()
         
-        # Instantiate and run the heuristic
-        # Special handling for Local Search to pass neighborhood classes
+        # Instancie et exécute l'heuristique
         if algo_class == FirstNeighborLocalSearch:
             heuristic = algo_class(kwargs.get("params", {}))
             solution = heuristic.run(instance, NonDeterminist, ReassignOneOperation, kwargs.get("params", {}))
@@ -53,11 +51,10 @@ def run_algorithm(algo_class: Type, instance: Instance, num_runs: int = 1, **kwa
     avg_time = total_time / num_runs
     return best_objective, avg_time
 
-# --- Main Comparison Script ---
 def main():
     results = []
 
-    print("Starting algorithm comparison...")
+    print("C'est parti pour la comparaison d'algorithmes ! ")
 
     for instance_name in INSTANCES_TO_TEST:
         instance_path = os.path.join(DATA_FOLDER, instance_name)
@@ -65,13 +62,13 @@ def main():
         mach_file = os.path.join(instance_path, f"{instance_name}_mach.csv")
 
         if not os.path.exists(ops_file) or not os.path.exists(mach_file):
-            print(f"  Skipping instance {instance_name}: files not found.")
+            print(f"  Skip {instance_name}: fichiers non trouvés.")
             continue
 
-        print(f"\n--- Processing instance: {instance_name} ---")
+        print(f"\n--- Instance en cours : {instance_name} ---")
         instance = Instance.from_file(instance_path)
 
-        # 1. Greedy Algorithm
+        # 1. algorithme "Greedy" 
         greedy_best_obj, greedy_avg_time = run_algorithm(Greedy, instance, num_runs=1) # Greedy is deterministic, so 1 run
         results.append({
             "Instance": instance_name,
@@ -80,8 +77,8 @@ def main():
             "Average Time (s)": greedy_avg_time
         })
 
-        # 2. NonDeterminist Algorithm
-        nondeterminist_params = {"seed": None} # None means random each time
+        # 2. algorithme non déterministe
+        nondeterminist_params = {"seed": None} # random
         nondeterminist_best_obj, nondeterminist_avg_time = run_algorithm(NonDeterminist, instance, num_runs=NUM_RUNS_NON_DETERMINISTIC, params=nondeterminist_params)
         results.append({
             "Instance": instance_name,
@@ -91,7 +88,7 @@ def main():
         })
 
         # 3. FirstNeighborLocalSearch
-        fnls_params = {"max_iterations": MAX_LS_ITERATIONS, "seed": None} # Initial NonDeterminist will be random
+        fnls_params = {"max_iterations": MAX_LS_ITERATIONS, "seed": None} 
         fnls_best_obj, fnls_avg_time = run_algorithm(FirstNeighborLocalSearch, instance, num_runs=NUM_RUNS_NON_DETERMINISTIC, params=fnls_params)
         results.append({
             "Instance": instance_name,
@@ -110,14 +107,14 @@ def main():
             "Average Time (s)": bnls_avg_time
         })
 
-    # Convert results to a pandas DataFrame for better visualization
+    # pour une meilleure visualisation !
     df_results = pd.DataFrame(results)
-    print("\n--- Comparison Results ---")
+    print("\n--- Résultat des comparaisons ---")
     print(df_results.to_markdown(index=False))
 
-    # Optional: Save results to CSV
+    # sauvegarde en CSV
     df_results.to_csv("algorithm_comparison_results.csv", index=False)
-    print("\nResults saved to algorithm_comparison_results.csv")
+    print("\nRésultats sauvegardés dans algorithm_comparison_results.csv")
 
 
 if __name__ == "__main__":

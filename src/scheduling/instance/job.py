@@ -52,6 +52,7 @@ class Job(object):
         '''
         if self._next_operation_index < len(self._operations):
             return self._operations[self._next_operation_index]
+        #si fini
         return None
 
     def schedule_operation(self):

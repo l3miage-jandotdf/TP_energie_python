@@ -31,7 +31,7 @@ class FirstNeighborLocalSearch(Heuristic):
         @param params: The parameters of your heuristic method if any as a
                        dictionary. Implementation should provide default values in the function.
         '''
-        super().__init__() # We override this.
+        super().__init__()
 
     def run(self, instance: Instance, InitClass, NeighborClass, params: Dict = dict()) -> Solution:
         '''
@@ -44,38 +44,34 @@ class FirstNeighborLocalSearch(Heuristic):
         @param NeighborClass: the class of neighborhood used in the vanilla local search (e.g., ReassignOneOperation)
         @param params: the parameters for the run (e.g., {"max_iterations": 100})
         '''
-        max_iterations = params.get("max_iterations", 100) # Default stop criterion
+        max_iterations = params.get("max_iterations", 100) # Critère d'arrêt par défaut
 
-        # Step 1: Initialize a solution
         initial_heuristic = InitClass(params)
         current_solution = initial_heuristic.run(instance, params)
 
         print(f"Initial solution objective: {current_solution.objective:.2f}")
 
-        # Step 2: Local Search Loop
         iteration = 0
         while iteration < max_iterations:
             found_better = False
             
-            # Instantiate the neighborhood for the current solution
+            # On "instancie" le voisinage pour la solution actuelle
             neighborhood = NeighborClass(instance) 
             
-            # Get the first better neighbor
             next_solution = neighborhood.first_better_neighbor(current_solution)
 
             if next_solution.objective < current_solution.objective:
                 current_solution = next_solution
                 found_better = True
-                print(f"  Iteration {iteration+1}: Found better solution with objective {current_solution.objective:.2f}")
+                print(f"  Itération {iteration+1}: Meilleure solution trouvée avec {current_solution.objective:.2f}")
             
             if not found_better:
-                # No better neighbor found in the entire neighborhood, stop.
-                print(f"  Iteration {iteration+1}: No better neighbor found. Local optimum reached.")
+                print(f"  Itération {iteration+1}: Pas de meilleur voisin trouvé ! On ne peut pas faire mieux.")
                 break 
 
             iteration += 1
 
-        print(f"Final solution objective: {current_solution.objective:.2f}")
+        print(f"Solution finale: {current_solution.objective:.2f}")
         return current_solution
 
 
@@ -96,7 +92,7 @@ class BestNeighborLocalSearch(Heuristic):
         @param params: The parameters of your heuristic method if any as a
                        dictionary. Implementation should provide default values in the function.
         '''
-        super().__init__() # We override this.
+        super().__init__() 
 
     def run(self, instance: Instance, InitClass, NeighborClasses, params: Dict = dict()) -> Solution:
         '''
@@ -110,49 +106,47 @@ class BestNeighborLocalSearch(Heuristic):
         @param params: the parameters for the run (e.g., {"max_iterations": 100})
         '''
         max_iterations = params.get("max_iterations", 100)
-        # Additional stop criterion: no improvement for 'x' consecutive iterations
+        
         no_improvement_limit = params.get("no_improvement_limit", 10) 
         consecutive_no_improvement = 0
 
-        # Step 1: Initialize a solution
         initial_heuristic = InitClass(params)
         current_solution = initial_heuristic.run(instance, params)
 
-        print(f"Initial solution objective: {current_solution.objective:.2f}")
+        print(f"Objectif de la solution initiale: {current_solution.objective:.2f}")
 
-        # Step 2: Local Search Loop
         iteration = 0
         while iteration < max_iterations:
-            best_neighbor_overall = current_solution.deepcopy() # Start with current as the best candidate
+            best_neighbor_overall = current_solution.deepcopy() # On commence avec la solution courante
             found_better_in_step = False
 
-            # Iterate through all provided neighborhoods
+            # Parcourir tous les voisins fournis
             for NeighborClass in NeighborClasses:
                 neighborhood = NeighborClass(instance)
                 
-                # Get the best neighbor from this specific neighborhood
+                # Trouver le meilleur voisin de ce voisinnage 
                 best_neighbor_in_this_neighborhood = neighborhood.best_neighbor(current_solution)
                 
-                # Compare with the best overall neighbor found so far in this iteration
+                # Comparer avec le meilleur voisin global trouvé jusqu'à présent dans cette itération
                 if best_neighbor_in_this_neighborhood.objective < best_neighbor_overall.objective:
                     best_neighbor_overall = best_neighbor_in_this_neighborhood
                     found_better_in_step = True
             
             if best_neighbor_overall.objective < current_solution.objective:
                 current_solution = best_neighbor_overall
-                consecutive_no_improvement = 0 # Reset counter
-                print(f"  Iteration {iteration+1}: Found better solution with objective {current_solution.objective:.2f}")
+                consecutive_no_improvement = 0 # Reset
+                print(f"  Iteration {iteration+1}: Meilleure solution trouvée avec {current_solution.objective:.2f}")
             else:
                 consecutive_no_improvement += 1
-                print(f"  Iteration {iteration+1}: No improvement. Consecutive no improvement: {consecutive_no_improvement}")
+                print(f"  Iteration {iteration+1}: Pas d'amélioration ! : {consecutive_no_improvement}")
 
             if consecutive_no_improvement >= no_improvement_limit:
-                print(f"  Stopping: No improvement for {no_improvement_limit} consecutive iterations.")
+                print(f"  Stopping: Pas d'amélioration sur {no_improvement_limit} itérations consécutives.")
                 break
 
             iteration += 1
 
-        print(f"Final solution objective: {current_solution.objective:.2f}")
+        print(f"Objectif de la fonction finale: {current_solution.objective:.2f}")
         return current_solution
 
 
@@ -168,7 +162,7 @@ if __name__ == "__main__":
     
     print("\n--- Running FirstNeighborLocalSearch ---")
     first_neighbor_ls = FirstNeighborLocalSearch()
-    # Using ReassignOneOperation as MyNeighborhood1
+
     sol_first = first_neighbor_ls.run(inst, NonDeterminist, ReassignOneOperation, {"max_iterations": 50})
     plt_first = sol_first.gantt("tab20")
     plt_first.savefig("gantt_first_neighbor_ls.png")
@@ -176,12 +170,8 @@ if __name__ == "__main__":
 
     print("\n--- Running BestNeighborLocalSearch ---")
     best_neighbor_ls = BestNeighborLocalSearch()
-    # Using both neighborhoods: ReassignOneOperation and SwapOperationsOnOneMachine
     sol_best = best_neighbor_ls.run(inst, NonDeterminist, [ReassignOneOperation, SwapOperationsOnOneMachine], 
                                     {"max_iterations": 100, "no_improvement_limit": 20})
     plt_best = sol_best.gantt("tab20")
     plt_best.savefig("gantt_best_neighbor_ls.png")
     print(f"Gantt chart for BestNeighborLocalSearch saved to gantt_best_neighbor_ls.png")
-
-    # Important: plt.show() might be needed to display the plots if not saving
-    # plt.show()
